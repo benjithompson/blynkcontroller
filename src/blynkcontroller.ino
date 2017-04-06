@@ -3,37 +3,42 @@
 
 //Settings
 #define tilt_wait   1000
-#define tiltPin 2
+#define in_pin 2
+#define out_pin 3
 #define powerPin 4
 
 //Status Variables
 volatile long last_msg = 0;
-volatile int tilt_state;
-bool msg_sent = false;
-bool send_shutdown = false;
+volatile bool mail_empty = true;
+// bool msg_sent = false;
+// bool send_shutdown = false;
 
-void door_close_isr(){
+void in_isr(){
   //Wait for tilt status check
   long now = millis();
-  if((now - last_msg) > tilt_wait){
-    
+
+  //wiats for tilt_wait
+  if((now - last_msg) > tilt_wait && mail_empty == true){
     last_msg = millis();
-    Serial.println(digitalRead(tiltPin));
-    
-    Serial.println("Door Closed.");
+    Serial.println("New Mail!");
     digitalWrite(powerPin, LOW);
+    mail_empty = false;
   }
+
 }
 
-void door_open_isr(){
+void out_isr(){
   //Wait for tilt status check
   long now = millis();
-  if((now - last_msg) > tilt_wait){
-    
+
+  //waits for tiltwait
+  if((now - last_msg) > tilt_wait && mail_empty == false){
     last_msg = millis();
-    Serial.println(digitalRead(tiltPin));
-    Serial.println("Door Opened.");
+
+    Serial.println("Obtained.");
     digitalWrite(powerPin, LOW);
+
+    mail_empty = true;
   }
 }
 
@@ -43,13 +48,14 @@ void setup() {
   Serial.begin(9600);
 
   //Tilt
-  pinMode(tiltPin, INPUT_PULLUP);
+  pinMode(in_pin, INPUT_PULLUP);
+  pinMode(out_pin, INPUT_PULLUP);
   pinMode(powerPin, OUTPUT);
 
   //Interupt
-  attachInterrupt(digitalPinToInterrupt(tiltPin), door_open_isr, FALLING);
-  attachInterrupt(digitalPinToInterrupt(tiltPin), door_close_isr, RISING);
-
+  attachInterrupt(digitalPinToInterrupt(in_pin), in_isr, RISING);
+  attachInterrupt(digitalPinToInterrupt(out_pin), out_isr, RISING);
+  
 }
 
 void loop() {
